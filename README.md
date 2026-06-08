@@ -65,7 +65,7 @@ See [docs/technical-decisions.md](docs/technical-decisions.md) for the compatibi
 
 - Windows 7 SP1, Windows 8.1, Windows 10, or Windows 11.
 - .NET Framework 4.8.
-- CryptoPro CSP with CAdESCOM available on the machine.
+- CryptoPro CSP with CAdESCOM and `cryptcp.exe` available on the machine.
 - A signing certificate with an accessible private key in the current user or local machine `My` store.
 
 CryptoPro CSP and certificates are not bundled with this application.

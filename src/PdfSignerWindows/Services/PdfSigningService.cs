@@ -11,6 +11,7 @@ namespace PdfSignerWindows.Services
     public sealed class PdfSigningService
     {
         private readonly CadesComSigner _signer;
+        private readonly CryptCpDetachedSignatureService _cryptCpDetachedSignatureService = new CryptCpDetachedSignatureService();
 
         public PdfSigningService(CadesComSigner signer)
         {
@@ -32,51 +33,45 @@ namespace PdfSignerWindows.Services
             Directory.CreateDirectory(outputDirectory);
             string outputPath = CreateOutputPath(inputPath, outputDirectory);
             string documentHash = ComputeSha256(inputPath);
-            byte[] detachedSignature = null;
+            string detachedSignaturePath = null;
             string detachedSignatureHash = null;
 
             if (createDetachedSignature)
             {
-                detachedSignature = CreateDetachedSignature(inputPath, certificate);
-                detachedSignatureHash = ComputeSha256(detachedSignature);
+                detachedSignaturePath = CreateDetachedSignaturePath(inputPath, outputDirectory);
+                _cryptCpDetachedSignatureService.CreateSigFile(inputPath, detachedSignaturePath, certificate.Thumbprint);
+                detachedSignatureHash = ComputeSha256(detachedSignaturePath);
             }
 
-            using (PdfReader reader = new PdfReader(inputPath))
-            using (FileStream output = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            try
             {
-                PdfStamper stamper = PdfStamper.CreateSignature(reader, output, '\0', null, true);
-                DateTime signDate = DateTime.Now;
-                DrawStampOnAllPages(stamper, reader, certificate, reason, signDate, documentHash, detachedSignatureHash);
+                using (PdfReader reader = new PdfReader(inputPath))
+                using (FileStream output = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                    PdfStamper stamper = PdfStamper.CreateSignature(reader, output, '\0', null, true);
+                    DateTime signDate = DateTime.Now;
+                    DrawStampOnAllPages(stamper, reader, certificate, reason, signDate, documentHash, detachedSignatureHash);
 
-                PdfSignatureAppearance appearance = stamper.SignatureAppearance;
-                appearance.Reason = reason;
-                appearance.Location = Environment.MachineName;
-                appearance.SignDate = signDate;
+                    PdfSignatureAppearance appearance = stamper.SignatureAppearance;
+                    appearance.Reason = reason;
+                    appearance.Location = Environment.MachineName;
+                    appearance.SignDate = signDate;
 
-                IExternalSignatureContainer container = new CadesExternalSignatureContainer(_signer, certificate.Thumbprint);
-                MakeSignature.SignExternalContainer(appearance, container, 65536);
+                    IExternalSignatureContainer container = new CadesExternalSignatureContainer(_signer, certificate.Thumbprint);
+                    MakeSignature.SignExternalContainer(appearance, container, 65536);
+                }
             }
-
-            if (detachedSignature != null)
+            catch
             {
-                WriteDetachedSignatureFile(inputPath, outputDirectory, detachedSignature);
+                DeleteFileIfCreated(outputPath);
+                if (!string.IsNullOrEmpty(detachedSignaturePath))
+                {
+                    DeleteFileIfCreated(detachedSignaturePath);
+                }
+                throw;
             }
 
             return outputPath;
-        }
-
-        private byte[] CreateDetachedSignature(string inputPath, AppCertificateInfo certificate)
-        {
-            using (FileStream input = new FileStream(inputPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
-                return _signer.SignDetached(input, certificate.Thumbprint);
-            }
-        }
-
-        private static void WriteDetachedSignatureFile(string inputPath, string outputDirectory, byte[] signature)
-        {
-            string signaturePath = CreateDetachedSignaturePath(inputPath, outputDirectory);
-            File.WriteAllBytes(signaturePath, signature);
         }
 
         private static void DrawStampOnAllPages(PdfStamper stamper, PdfReader reader, AppCertificateInfo certificate, string reason, DateTime signDate, string documentHash, string detachedSignatureHash)
@@ -192,11 +187,17 @@ namespace PdfSignerWindows.Services
             }
         }
 
-        private static string ComputeSha256(byte[] bytes)
+        private static void DeleteFileIfCreated(string path)
         {
-            using (SHA256 sha256 = SHA256.Create())
+            try
             {
-                return BitConverter.ToString(sha256.ComputeHash(bytes)).Replace("-", string.Empty).ToUpperInvariant();
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch
+            {
             }
         }
 

@@ -38,13 +38,13 @@ The MVP signs through CAdESCOM:
 5. The app passes the byte-range bytes to `CAdESCOM.CadesSignedData`.
 6. CAdESCOM creates a detached CAdES-BES signature with `CAdESCOM.CPSigner`.
 7. iTextSharp embeds the signature bytes into the PDF signature container after drawing the visible stamp on every page.
-8. If requested, the app also creates a detached `.sig` CAdES signature file for the selected source PDF and prints the SHA-256 hash of that `.sig` on the visible stamp.
+8. If requested, the app also creates a detached `.sig` CAdES signature file for the selected source PDF through CryptoPro `cryptcp.exe -sign -der -detached` and prints the SHA-256 hash of that `.sig` on the visible stamp.
 
 Planned fallback work:
 
 - Detect `certmgr.exe`, `csptest.exe`, and `cryptcp.exe` in common CryptoPro installation paths.
 - Add a diagnostic screen with CryptoPro version, provider availability, and certificate/key-container status.
-- Evaluate whether `cryptcp.exe` can provide a reliable command-line signing fallback for installations where CAdESCOM is unavailable.
+- Evaluate whether `cryptcp.exe` can also provide a reliable command-line PDF signing fallback for installations where CAdESCOM is unavailable.
 - Evaluate direct CryptoAPI/CSP integration if command-line fallback proves too limited.
 
 ## PDF Signature Notes
