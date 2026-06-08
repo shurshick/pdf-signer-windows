@@ -13,8 +13,8 @@
     <AssemblyDescription>Desktop PDF signing and visible stamp tool for Windows with CryptoPro CSP</AssemblyDescription>
     <Company>shurshick</Company>
     <Authors>shurshick</Authors>
-    <Version>0.2.1</Version>
-    <FileVersion>0.2.1.0</FileVersion>
+    <Version>0.2.0</Version>
+    <FileVersion>0.2.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
