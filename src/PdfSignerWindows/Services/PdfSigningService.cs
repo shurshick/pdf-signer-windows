@@ -35,16 +35,13 @@ namespace PdfSignerWindows.Services
             using (FileStream output = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
                 PdfStamper stamper = PdfStamper.CreateSignature(reader, output, '\0', null, true);
+                DateTime signDate = DateTime.Now;
+                DrawStampOnAllPages(stamper, reader, certificate, reason, signDate);
+
                 PdfSignatureAppearance appearance = stamper.SignatureAppearance;
                 appearance.Reason = reason;
                 appearance.Location = Environment.MachineName;
-                appearance.SignDate = DateTime.Now;
-                appearance.Acro6Layers = true;
-                appearance.Layer2Text = BuildStampText(certificate, reason);
-                appearance.Layer2Font = new Font(Font.FontFamily.HELVETICA, 8f, Font.NORMAL, BaseColor.BLACK);
-
-                Rectangle page = reader.GetPageSizeWithRotation(1);
-                appearance.SetVisibleSignature(BuildStampRectangle(page), 1, "sig_" + Guid.NewGuid().ToString("N"));
+                appearance.SignDate = signDate;
 
                 IExternalSignatureContainer container = new CadesExternalSignatureContainer(_signer, certificate.Thumbprint);
                 MakeSignature.SignExternalContainer(appearance, container, 65536);
@@ -53,13 +50,56 @@ namespace PdfSignerWindows.Services
             return outputPath;
         }
 
-        private static string BuildStampText(AppCertificateInfo certificate, string reason)
+        private static void DrawStampOnAllPages(PdfStamper stamper, PdfReader reader, AppCertificateInfo certificate, string reason, DateTime signDate)
+        {
+            string stampText = BuildStampText(certificate, reason, signDate);
+            BaseFont baseFont = CreateStampFont();
+
+            for (int pageNumber = 1; pageNumber <= reader.NumberOfPages; pageNumber++)
+            {
+                Rectangle page = reader.GetPageSizeWithRotation(pageNumber);
+                Rectangle stamp = BuildStampRectangle(page);
+                PdfContentByte canvas = stamper.GetOverContent(pageNumber);
+
+                canvas.SaveState();
+                canvas.SetColorFill(BaseColor.WHITE);
+                canvas.SetColorStroke(BaseColor.DARK_GRAY);
+                canvas.RoundRectangle(stamp.Left, stamp.Bottom, stamp.Width, stamp.Height, 4f);
+                canvas.FillStroke();
+
+                ColumnText column = new ColumnText(canvas);
+                Font font = new Font(baseFont, 8f, Font.NORMAL, BaseColor.BLACK);
+                column.SetSimpleColumn(
+                    new Phrase(stampText, font),
+                    stamp.Left + 6f,
+                    stamp.Bottom + 5f,
+                    stamp.Right - 6f,
+                    stamp.Top - 5f,
+                    10f,
+                    Element.ALIGN_LEFT);
+                column.Go();
+                canvas.RestoreState();
+            }
+        }
+
+        private static string BuildStampText(AppCertificateInfo certificate, string reason, DateTime signDate)
         {
             string name = certificate.DisplayName;
-            string date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            string date = signDate.ToString("yyyy-MM-dd HH:mm:ss");
             return "Digitally signed by: " + name + Environment.NewLine
                 + "Date: " + date + Environment.NewLine
                 + "Reason: " + reason;
+        }
+
+        private static BaseFont CreateStampFont()
+        {
+            string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "arial.ttf");
+            if (File.Exists(arial))
+            {
+                return BaseFont.CreateFont(arial, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            }
+
+            return BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
         }
 
         private static Rectangle BuildStampRectangle(Rectangle page)

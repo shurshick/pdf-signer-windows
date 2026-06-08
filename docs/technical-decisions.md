@@ -36,7 +36,7 @@ The MVP signs through CAdESCOM:
 3. During PDF signing, iTextSharp provides the PDF byte-range stream.
 4. The app passes the byte-range bytes to `CAdESCOM.CadesSignedData`.
 5. CAdESCOM creates a detached CAdES-BES signature with `CAdESCOM.CPSigner`.
-6. iTextSharp embeds the signature bytes into the PDF signature container and draws the visible stamp.
+6. iTextSharp embeds the signature bytes into the PDF signature container after drawing the visible stamp on every page.
 
 Planned fallback work:
 
@@ -49,7 +49,7 @@ Planned fallback work:
 
 The MVP uses `/ETSI.CAdES.detached` and an estimated signature container size of 65536 bytes. If production certificates include very long chains, OCSP/CRL data, or timestamps, this size may need to become configurable or dynamically retried.
 
-The visible stamp is placed on the first page in the lower-right corner. Later versions should support:
+The visible stamp is placed on every page in the lower-right corner before the document is signed, so the stamp content is covered by the signature. Later versions should support:
 
 - page selection;
 - drag-and-drop stamp placement;

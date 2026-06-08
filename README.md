@@ -6,14 +6,14 @@
 
 ## Описание
 
-PDF Signer Windows предназначен для пользователей, которым нужно быстро подписывать один или несколько PDF-документов на ПК с Windows и CryptoPro CSP. Приложение показывает сертификаты из хранилища Windows, позволяет выбрать PDF-файлы, подписывает их встроенной отсоединенной CAdES-подписью и размещает видимый штамп на первой странице.
+PDF Signer Windows предназначен для пользователей, которым нужно быстро подписывать один или несколько PDF-документов на ПК с Windows и CryptoPro CSP. Приложение показывает сертификаты из хранилища Windows, позволяет выбрать PDF-файлы, подписывает их встроенной отсоединенной CAdES-подписью и размещает видимый штамп на всех страницах.
 
 MVP поддерживает:
 
 - выбор одного или нескольких PDF-файлов;
 - выбор сертификата из хранилищ `CurrentUser\My` и `LocalMachine\My`;
 - подписание PDF через CryptoPro CAdESCOM;
-- видимый штамп подписи в PDF;
+- видимый штамп подписи на всех страницах PDF;
 - пакетное подписание нескольких файлов за один запуск;
 - автоматический русский или английский интерфейс по языку системы;
 - сборку portable ZIP и установщика NSIS через GitHub Actions.
@@ -40,7 +40,7 @@ MVP:
 - select one or more PDF files;
 - select a certificate from the Windows `CurrentUser\My` or `LocalMachine\My` certificate stores;
 - create an embedded detached CAdES PDF signature through CryptoPro CAdESCOM;
-- add a visible signature stamp on the first page;
+- add a visible signature stamp on every page;
 - batch-sign multiple PDFs in one run;
 - choose Russian or English UI automatically from the system UI language;
 - build a portable ZIP and an NSIS installer with GitHub Actions.
