@@ -14,7 +14,7 @@ MVP поддерживает:
 - выбор действующего сертификата из хранилищ `CurrentUser\My` и `LocalMachine\My`;
 - подписание PDF через CryptoPro CAdESCOM;
 - видимый штамп подписи на всех страницах PDF;
-- SHA-256 хэш данных, SHA-256 хэш `.sig` при создании открепленной подписи и отпечаток сертификата на штампе;
+- отпечаток сертификата на штампе;
 - опциональное создание открепленной CAdES-подписи в формате `.sig`;
 - режим `.sig` без встроенной подписи в PDF: PDF получает только видимый штамп, а криптографическая подпись создается отдельным файлом;
 - сохранение результата в указанную папку или рядом с исходным PDF;
@@ -45,7 +45,7 @@ MVP:
 - select a currently valid certificate from the Windows `CurrentUser\My` or `LocalMachine\My` certificate stores;
 - create an embedded detached CAdES PDF signature through CryptoPro CAdESCOM;
 - add a blue visible signature stamp on every page;
-- include a SHA-256 data hash, SHA-256 `.sig` hash when a detached signature is created, and certificate thumbprint on the stamp;
+- include the certificate thumbprint on the stamp;
 - optionally create a detached CAdES `.sig` signature;
 - detached `.sig` mode without embedding a signature into the PDF: the PDF gets only a visible stamp, while the cryptographic signature is created as a separate file;
 - save outputs either to the selected output folder or next to each source PDF;

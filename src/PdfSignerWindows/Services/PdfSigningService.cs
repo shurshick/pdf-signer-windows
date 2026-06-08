@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Security.Cryptography;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.security;
@@ -32,41 +31,29 @@ namespace PdfSignerWindows.Services
             string effectiveOutputDirectory = ResolveOutputDirectory(inputPath, outputDirectory, saveNextToSource);
             Directory.CreateDirectory(effectiveOutputDirectory);
             string outputPath = CreateOutputPath(inputPath, effectiveOutputDirectory);
-            string documentHash = ComputeSha256(inputPath);
-            byte[] detachedSignature = null;
-            string detachedSignatureHash = null;
 
             if (createDetachedSignature)
             {
-                detachedSignature = CreateDetachedSignature(inputPath, certificate);
-                detachedSignatureHash = ComputeSha256(detachedSignature);
-            }
-
-            if (createDetachedSignature)
-            {
-                StampPdfOnly(inputPath, outputPath, certificate, reason, documentHash, detachedSignatureHash);
+                StampPdfOnly(inputPath, outputPath, certificate, reason);
+                byte[] detachedSignature = CreateDetachedSignature(outputPath, certificate);
+                WriteDetachedSignatureFile(outputPath, effectiveOutputDirectory, detachedSignature);
             }
             else
             {
-                StampAndEmbedSignature(inputPath, outputPath, certificate, reason, documentHash);
-            }
-
-            if (detachedSignature != null)
-            {
-                WriteDetachedSignatureFile(inputPath, effectiveOutputDirectory, detachedSignature);
+                StampAndEmbedSignature(inputPath, outputPath, certificate, reason);
             }
 
             return outputPath;
         }
 
-        private void StampAndEmbedSignature(string inputPath, string outputPath, AppCertificateInfo certificate, string reason, string documentHash)
+        private void StampAndEmbedSignature(string inputPath, string outputPath, AppCertificateInfo certificate, string reason)
         {
             using (PdfReader reader = new PdfReader(inputPath))
             using (FileStream output = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
                 PdfStamper stamper = PdfStamper.CreateSignature(reader, output, '\0', null, true);
                 DateTime signDate = DateTime.Now;
-                DrawStampOnAllPages(stamper, reader, certificate, reason, signDate, documentHash, null);
+                DrawStampOnAllPages(stamper, reader, certificate, reason, signDate);
 
                 PdfSignatureAppearance appearance = stamper.SignatureAppearance;
                 appearance.Reason = reason;
@@ -78,14 +65,14 @@ namespace PdfSignerWindows.Services
             }
         }
 
-        private static void StampPdfOnly(string inputPath, string outputPath, AppCertificateInfo certificate, string reason, string documentHash, string detachedSignatureHash)
+        private static void StampPdfOnly(string inputPath, string outputPath, AppCertificateInfo certificate, string reason)
         {
             using (PdfReader reader = new PdfReader(inputPath))
             using (FileStream output = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             using (PdfStamper stamper = new PdfStamper(reader, output))
             {
                 DateTime signDate = DateTime.Now;
-                DrawStampOnAllPages(stamper, reader, certificate, reason, signDate, documentHash, detachedSignatureHash);
+                DrawStampOnAllPages(stamper, reader, certificate, reason, signDate);
             }
         }
 
@@ -103,9 +90,9 @@ namespace PdfSignerWindows.Services
             File.WriteAllBytes(signaturePath, signature);
         }
 
-        private static void DrawStampOnAllPages(PdfStamper stamper, PdfReader reader, AppCertificateInfo certificate, string reason, DateTime signDate, string documentHash, string detachedSignatureHash)
+        private static void DrawStampOnAllPages(PdfStamper stamper, PdfReader reader, AppCertificateInfo certificate, string reason, DateTime signDate)
         {
-            string stampText = BuildStampText(certificate, reason, signDate, documentHash, detachedSignatureHash);
+            string stampText = BuildStampText(certificate, reason, signDate);
             BaseFont baseFont = CreateStampFont();
             BaseColor stampBlue = new BaseColor(0, 74, 173);
 
@@ -137,21 +124,14 @@ namespace PdfSignerWindows.Services
             }
         }
 
-        private static string BuildStampText(AppCertificateInfo certificate, string reason, DateTime signDate, string documentHash, string detachedSignatureHash)
+        private static string BuildStampText(AppCertificateInfo certificate, string reason, DateTime signDate)
         {
             string name = certificate.DisplayName;
             string date = signDate.ToString("yyyy-MM-dd HH:mm:ss");
-            string text = "Digitally signed by: " + name + Environment.NewLine
+            return "Digitally signed by: " + name + Environment.NewLine
                 + "Date: " + date + Environment.NewLine
                 + "Reason: " + reason + Environment.NewLine
-                + "Data SHA-256: " + FormatHash(documentHash) + Environment.NewLine;
-
-            if (!string.IsNullOrWhiteSpace(detachedSignatureHash))
-            {
-                text += "SIG SHA-256: " + FormatHash(detachedSignatureHash) + Environment.NewLine;
-            }
-
-            return text + "Cert SHA-1: " + FormatHash(certificate.Thumbprint);
+                + "Cert SHA-1: " + FormatHash(certificate.Thumbprint);
         }
 
         private static BaseFont CreateStampFont()
@@ -215,23 +195,6 @@ namespace PdfSignerWindows.Services
             }
 
             return candidate;
-        }
-
-        private static string ComputeSha256(string path)
-        {
-            using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
-            using (SHA256 sha256 = SHA256.Create())
-            {
-                return BitConverter.ToString(sha256.ComputeHash(stream)).Replace("-", string.Empty).ToUpperInvariant();
-            }
-        }
-
-        private static string ComputeSha256(byte[] bytes)
-        {
-            using (SHA256 sha256 = SHA256.Create())
-            {
-                return BitConverter.ToString(sha256.ComputeHash(bytes)).Replace("-", string.Empty).ToUpperInvariant();
-            }
         }
 
         private static string FormatHash(string hash)
