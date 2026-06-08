@@ -18,7 +18,7 @@ namespace PdfSignerWindows.Services
             _signer = signer;
         }
 
-        public string SignPdf(string inputPath, string outputDirectory, AppCertificateInfo certificate, string reason, bool createDetachedSignature, string cryptCpPath)
+        public string SignPdf(string inputPath, string outputDirectory, AppCertificateInfo certificate, string reason, bool createDetachedSignature)
         {
             if (string.IsNullOrWhiteSpace(inputPath))
             {
@@ -39,7 +39,7 @@ namespace PdfSignerWindows.Services
             if (createDetachedSignature)
             {
                 detachedSignaturePath = CreateDetachedSignaturePath(inputPath, outputDirectory);
-                _cryptCpDetachedSignatureService.CreateSigFile(inputPath, detachedSignaturePath, certificate.Thumbprint, cryptCpPath);
+                _cryptCpDetachedSignatureService.CreateSigFile(inputPath, detachedSignaturePath, certificate.Thumbprint);
                 detachedSignatureHash = ComputeSha256(detachedSignaturePath);
             }
 

@@ -44,7 +44,7 @@ MVP:
 - create an embedded detached CAdES PDF signature through CryptoPro CAdESCOM;
 - add a blue visible signature stamp on every page;
 - include a SHA-256 data hash, SHA-256 `.sig` hash when a detached signature is created, and certificate thumbprint on the stamp;
-- optionally create a detached CAdES `.sig` signature through CryptoPro `cryptcp.exe`, with manual path selection when auto-detection is not enough;
+- optionally create a detached CAdES `.sig` signature;
 - batch-sign multiple PDFs in one run;
 - choose Russian or English UI automatically from the system UI language;
 - build a portable ZIP and an NSIS installer with GitHub Actions.

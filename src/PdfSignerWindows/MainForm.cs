@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Microsoft.Win32;
 using PdfSignerWindows.Models;
 using PdfSignerWindows.Services;
 
@@ -17,7 +16,6 @@ namespace PdfSignerWindows
         private readonly Localization _text = new Localization();
         private readonly CertificateService _certificateService = new CertificateService();
         private readonly CadesComSigner _cadesSigner = new CadesComSigner();
-        private readonly CryptCpDetachedSignatureService _cryptCpService = new CryptCpDetachedSignatureService();
         private readonly BindingList<string> _files = new BindingList<string>();
         private readonly BindingList<CertificateRow> _certificateRows = new BindingList<CertificateRow>();
 
@@ -26,7 +24,6 @@ namespace PdfSignerWindows
         private TextBox _outputFolder;
         private TextBox _reason;
         private CheckBox _detachedSignature;
-        private TextBox _cryptCpPath;
         private Button _signButton;
         private ProgressBar _progress;
         private Label _status;
@@ -51,7 +48,7 @@ namespace PdfSignerWindows
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 34));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 42));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 162));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 122));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
             Controls.Add(root);
@@ -166,14 +163,13 @@ namespace PdfSignerWindows
             TableLayoutPanel panel = new TableLayoutPanel();
             panel.Dock = DockStyle.Fill;
             panel.ColumnCount = 3;
-            panel.RowCount = 4;
+            panel.RowCount = 3;
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
             panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
             panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
             panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
-            panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
 
             Label outputLabel = new Label();
             outputLabel.Text = _text.OutputFolder;
@@ -207,21 +203,6 @@ namespace PdfSignerWindows
             _detachedSignature.TextAlign = ContentAlignment.MiddleLeft;
             panel.Controls.Add(_detachedSignature, 1, 2);
             panel.SetColumnSpan(_detachedSignature, 2);
-
-            Label cryptCpLabel = new Label();
-            cryptCpLabel.Text = _text.CryptCpPath;
-            cryptCpLabel.TextAlign = ContentAlignment.MiddleLeft;
-            panel.Controls.Add(cryptCpLabel, 0, 3);
-
-            _cryptCpPath = new TextBox();
-            _cryptCpPath.Dock = DockStyle.Fill;
-            _cryptCpPath.Text = LoadCryptCpPath();
-            panel.Controls.Add(_cryptCpPath, 1, 3);
-
-            Button browseCryptCp = new Button();
-            browseCryptCp.Text = _text.Browse;
-            browseCryptCp.Click += delegate { SelectCryptCpPath(); };
-            panel.Controls.Add(browseCryptCp, 2, 3);
 
             return panel;
         }
@@ -279,18 +260,6 @@ namespace PdfSignerWindows
             }
         }
 
-        private void SelectCryptCpPath()
-        {
-            OpenFileDialog dialog = new OpenFileDialog();
-            dialog.Filter = _text.SelectCryptCpFilter;
-            dialog.FileName = "cryptcp.exe";
-            if (dialog.ShowDialog(this) == DialogResult.OK)
-            {
-                _cryptCpPath.Text = dialog.FileName;
-                SaveCryptCpPath(dialog.FileName);
-            }
-        }
-
         private void LoadCertificates()
         {
             _status.Text = _text.LoadingCertificates;
@@ -340,8 +309,6 @@ namespace PdfSignerWindows
             string outputFolder = _outputFolder.Text;
             string reason = _reason.Text;
             bool createDetachedSignature = _detachedSignature.Checked;
-            string cryptCpPath = _cryptCpPath.Text;
-            SaveCryptCpPath(cryptCpPath);
             _progress.Maximum = files.Length;
             _progress.Value = 0;
             _signButton.Enabled = false;
@@ -353,7 +320,7 @@ namespace PdfSignerWindows
                 {
                     string file = files[i];
                     _status.Text = _text.SignedCount(i, files.Length) + ": " + Path.GetFileName(file);
-                    await Task.Run(delegate { pdfSigningService.SignPdf(file, outputFolder, certificate, reason, createDetachedSignature, cryptCpPath); });
+                    await Task.Run(delegate { pdfSigningService.SignPdf(file, outputFolder, certificate, reason, createDetachedSignature); });
                     _progress.Value = i + 1;
                     _status.Text = _text.SignedCount(i + 1, files.Length);
                 }
@@ -369,46 +336,6 @@ namespace PdfSignerWindows
             finally
             {
                 _signButton.Enabled = true;
-            }
-        }
-
-        private string LoadCryptCpPath()
-        {
-            string saved = null;
-            try
-            {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\shurshick\PDF Signer Windows"))
-                {
-                    saved = key == null ? null : Convert.ToString(key.GetValue("CryptCpPath"));
-                }
-            }
-            catch
-            {
-            }
-
-            string resolved = _cryptCpService.ResolveCryptCpPath(saved);
-            return resolved ?? saved ?? string.Empty;
-        }
-
-        private static void SaveCryptCpPath(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return;
-            }
-
-            try
-            {
-                using (RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\shurshick\PDF Signer Windows"))
-                {
-                    if (key != null)
-                    {
-                        key.SetValue("CryptCpPath", path);
-                    }
-                }
-            }
-            catch
-            {
             }
         }
 
