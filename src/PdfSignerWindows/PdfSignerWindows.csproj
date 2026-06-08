@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>PdfSignerWindows</RootNamespace>
+    <AssemblyName>PdfSignerWindows</AssemblyName>
+    <LangVersion>7.3</LangVersion>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AssemblyTitle>PDF Signer Windows</AssemblyTitle>
+    <AssemblyProduct>PDF Signer Windows</AssemblyProduct>
+    <AssemblyDescription>Desktop PDF signing and visible stamp tool for Windows with CryptoPro CSP</AssemblyDescription>
+    <Company>shurshick</Company>
+    <Authors>shurshick</Authors>
+    <Version>0.1.0</Version>
+    <FileVersion>0.1.0.0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="iTextSharp" Version="5.5.13.4" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+</Project>
