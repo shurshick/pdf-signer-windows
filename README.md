@@ -1,5 +1,34 @@
 # PDF Signer Windows
 
+Настольное приложение для Windows 7, 8.1, 10 и 11, которое подписывает PDF-файлы с помощью CryptoPro CSP и добавляет видимый штамп подписи в документ.
+
+Это отдельный Windows-проект семейства `shurshick/pdf-signer`. Он не заменяет и не смешивается с существующей Linux-версией.
+
+## Описание
+
+PDF Signer Windows предназначен для пользователей, которым нужно быстро подписывать один или несколько PDF-документов на ПК с Windows и CryptoPro CSP. Приложение показывает сертификаты из хранилища Windows, позволяет выбрать PDF-файлы, подписывает их встроенной отсоединенной CAdES-подписью и размещает видимый штамп на первой странице.
+
+MVP поддерживает:
+
+- выбор одного или нескольких PDF-файлов;
+- выбор сертификата из хранилищ `CurrentUser\My` и `LocalMachine\My`;
+- подписание PDF через CryptoPro CAdESCOM;
+- видимый штамп подписи в PDF;
+- пакетное подписание нескольких файлов за один запуск;
+- автоматический русский или английский интерфейс по языку системы;
+- сборку portable ZIP и установщика NSIS через GitHub Actions.
+
+Требования к запуску:
+
+- Windows 7 SP1, Windows 8.1, Windows 10 или Windows 11;
+- .NET Framework 4.8;
+- установленный CryptoPro CSP с доступным CAdESCOM;
+- сертификат подписи с доступным закрытым ключом в хранилище Windows.
+
+CryptoPro CSP, сертификаты и ключевые контейнеры не входят в поставку приложения.
+
+---
+
 Desktop PDF signing and visible stamp tool for Windows 7, 8.1, 10, and 11 with CryptoPro CSP.
 
 This is a separate Windows project for the `shurshick/pdf-signer` family. It is not a replacement for the existing Linux repository.
