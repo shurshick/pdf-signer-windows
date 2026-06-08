@@ -14,8 +14,11 @@ namespace PdfSignerWindows.Services
             LoadFromStore(StoreLocation.CurrentUser, certificates);
             LoadFromStore(StoreLocation.LocalMachine, certificates);
 
+            DateTime now = DateTime.Now;
+
             return certificates
                 .Where(c => c.HasPrivateKey)
+                .Where(c => c.NotBefore <= now && c.NotAfter >= now)
                 .GroupBy(c => c.StoreName + ":" + c.Thumbprint)
                 .Select(g => g.First())
                 .OrderBy(c => c.DisplayName)

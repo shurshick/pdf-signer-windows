@@ -6,14 +6,16 @@
 
 ## Описание
 
-PDF Signer Windows предназначен для пользователей, которым нужно быстро подписывать один или несколько PDF-документов на ПК с Windows и CryptoPro CSP. Приложение показывает сертификаты из хранилища Windows, позволяет выбрать PDF-файлы, подписывает их встроенной отсоединенной CAdES-подписью и размещает видимый штамп на всех страницах.
+PDF Signer Windows предназначен для пользователей, которым нужно быстро подписывать один или несколько PDF-документов на ПК с Windows и CryptoPro CSP. Приложение показывает действующие сертификаты из хранилища Windows, позволяет выбрать PDF-файлы, подписывает их встроенной отсоединенной CAdES-подписью и размещает синий видимый штамп на всех страницах.
 
 MVP поддерживает:
 
 - выбор одного или нескольких PDF-файлов;
-- выбор сертификата из хранилищ `CurrentUser\My` и `LocalMachine\My`;
+- выбор действующего сертификата из хранилищ `CurrentUser\My` и `LocalMachine\My`;
 - подписание PDF через CryptoPro CAdESCOM;
 - видимый штамп подписи на всех страницах PDF;
+- SHA-256 хэш данных, SHA-256 хэш `.sig` при создании открепленной подписи и отпечаток сертификата на штампе;
+- опциональное создание открепленной CAdES-подписи в формате `.sig`;
 - пакетное подписание нескольких файлов за один запуск;
 - автоматический русский или английский интерфейс по языку системы;
 - сборку portable ZIP и установщика NSIS через GitHub Actions.
@@ -38,9 +40,11 @@ This is a separate Windows project for the `shurshick/pdf-signer` family. It is 
 MVP:
 
 - select one or more PDF files;
-- select a certificate from the Windows `CurrentUser\My` or `LocalMachine\My` certificate stores;
+- select a currently valid certificate from the Windows `CurrentUser\My` or `LocalMachine\My` certificate stores;
 - create an embedded detached CAdES PDF signature through CryptoPro CAdESCOM;
-- add a visible signature stamp on every page;
+- add a blue visible signature stamp on every page;
+- include a SHA-256 data hash, SHA-256 `.sig` hash when a detached signature is created, and certificate thumbprint on the stamp;
+- optionally create a detached CAdES `.sig` signature;
 - batch-sign multiple PDFs in one run;
 - choose Russian or English UI automatically from the system UI language;
 - build a portable ZIP and an NSIS installer with GitHub Actions.

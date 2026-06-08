@@ -32,11 +32,13 @@ Rejected or deferred:
 The MVP signs through CAdESCOM:
 
 1. The app discovers certificates from Windows certificate stores.
-2. The user selects a certificate by thumbprint.
-3. During PDF signing, iTextSharp provides the PDF byte-range stream.
-4. The app passes the byte-range bytes to `CAdESCOM.CadesSignedData`.
-5. CAdESCOM creates a detached CAdES-BES signature with `CAdESCOM.CPSigner`.
-6. iTextSharp embeds the signature bytes into the PDF signature container after drawing the visible stamp on every page.
+2. Expired and not-yet-valid certificates are hidden from the selectable list.
+3. The user selects a certificate by thumbprint.
+4. During PDF signing, iTextSharp provides the PDF byte-range stream.
+5. The app passes the byte-range bytes to `CAdESCOM.CadesSignedData`.
+6. CAdESCOM creates a detached CAdES-BES signature with `CAdESCOM.CPSigner`.
+7. iTextSharp embeds the signature bytes into the PDF signature container after drawing the visible stamp on every page.
+8. If requested, the app also creates a detached `.sig` CAdES signature file for the selected source PDF and prints the SHA-256 hash of that `.sig` on the visible stamp.
 
 Planned fallback work:
 
@@ -49,7 +51,11 @@ Planned fallback work:
 
 The MVP uses `/ETSI.CAdES.detached` and an estimated signature container size of 65536 bytes. If production certificates include very long chains, OCSP/CRL data, or timestamps, this size may need to become configurable or dynamically retried.
 
-The visible stamp is placed on every page in the lower-right corner before the document is signed, so the stamp content is covered by the signature. Later versions should support:
+The visible stamp is blue and is placed on every page in the lower-right corner before the document is signed, so the stamp content is covered by the signature. It includes signer name, signing date, reason, SHA-256 of the selected source PDF, the SHA-256 hash of the detached `.sig` when that option is enabled, and the certificate SHA-1 thumbprint.
+
+The final CMS/CAdES signature value is only known while the PDF byte-range signature container is being finalized. Updating visible page content after that point would invalidate the PDF signature, so the MVP prints the source data hash and certificate thumbprint on the stamp instead of mutating the signed PDF after signing.
+
+Later versions should support:
 
 - page selection;
 - drag-and-drop stamp placement;

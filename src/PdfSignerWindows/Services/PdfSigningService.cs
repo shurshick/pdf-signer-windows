@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Security.Cryptography;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.security;
@@ -16,7 +17,7 @@ namespace PdfSignerWindows.Services
             _signer = signer;
         }
 
-        public string SignPdf(string inputPath, string outputDirectory, AppCertificateInfo certificate, string reason)
+        public string SignPdf(string inputPath, string outputDirectory, AppCertificateInfo certificate, string reason, bool createDetachedSignature)
         {
             if (string.IsNullOrWhiteSpace(inputPath))
             {
@@ -30,13 +31,22 @@ namespace PdfSignerWindows.Services
 
             Directory.CreateDirectory(outputDirectory);
             string outputPath = CreateOutputPath(inputPath, outputDirectory);
+            string documentHash = ComputeSha256(inputPath);
+            byte[] detachedSignature = null;
+            string detachedSignatureHash = null;
+
+            if (createDetachedSignature)
+            {
+                detachedSignature = CreateDetachedSignature(inputPath, certificate);
+                detachedSignatureHash = ComputeSha256(detachedSignature);
+            }
 
             using (PdfReader reader = new PdfReader(inputPath))
             using (FileStream output = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
                 PdfStamper stamper = PdfStamper.CreateSignature(reader, output, '\0', null, true);
                 DateTime signDate = DateTime.Now;
-                DrawStampOnAllPages(stamper, reader, certificate, reason, signDate);
+                DrawStampOnAllPages(stamper, reader, certificate, reason, signDate, documentHash, detachedSignatureHash);
 
                 PdfSignatureAppearance appearance = stamper.SignatureAppearance;
                 appearance.Reason = reason;
@@ -47,13 +57,33 @@ namespace PdfSignerWindows.Services
                 MakeSignature.SignExternalContainer(appearance, container, 65536);
             }
 
+            if (detachedSignature != null)
+            {
+                WriteDetachedSignatureFile(inputPath, outputDirectory, detachedSignature);
+            }
+
             return outputPath;
         }
 
-        private static void DrawStampOnAllPages(PdfStamper stamper, PdfReader reader, AppCertificateInfo certificate, string reason, DateTime signDate)
+        private byte[] CreateDetachedSignature(string inputPath, AppCertificateInfo certificate)
         {
-            string stampText = BuildStampText(certificate, reason, signDate);
+            using (FileStream input = new FileStream(inputPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                return _signer.SignDetached(input, certificate.Thumbprint);
+            }
+        }
+
+        private static void WriteDetachedSignatureFile(string inputPath, string outputDirectory, byte[] signature)
+        {
+            string signaturePath = CreateDetachedSignaturePath(inputPath, outputDirectory);
+            File.WriteAllBytes(signaturePath, signature);
+        }
+
+        private static void DrawStampOnAllPages(PdfStamper stamper, PdfReader reader, AppCertificateInfo certificate, string reason, DateTime signDate, string documentHash, string detachedSignatureHash)
+        {
+            string stampText = BuildStampText(certificate, reason, signDate, documentHash, detachedSignatureHash);
             BaseFont baseFont = CreateStampFont();
+            BaseColor stampBlue = new BaseColor(0, 74, 173);
 
             for (int pageNumber = 1; pageNumber <= reader.NumberOfPages; pageNumber++)
             {
@@ -63,32 +93,41 @@ namespace PdfSignerWindows.Services
 
                 canvas.SaveState();
                 canvas.SetColorFill(BaseColor.WHITE);
-                canvas.SetColorStroke(BaseColor.DARK_GRAY);
+                canvas.SetColorStroke(stampBlue);
+                canvas.SetLineWidth(1.2f);
                 canvas.RoundRectangle(stamp.Left, stamp.Bottom, stamp.Width, stamp.Height, 4f);
                 canvas.FillStroke();
 
                 ColumnText column = new ColumnText(canvas);
-                Font font = new Font(baseFont, 8f, Font.NORMAL, BaseColor.BLACK);
+                Font font = new Font(baseFont, 7.2f, Font.NORMAL, stampBlue);
                 column.SetSimpleColumn(
                     new Phrase(stampText, font),
                     stamp.Left + 6f,
                     stamp.Bottom + 5f,
                     stamp.Right - 6f,
                     stamp.Top - 5f,
-                    10f,
+                    8.8f,
                     Element.ALIGN_LEFT);
                 column.Go();
                 canvas.RestoreState();
             }
         }
 
-        private static string BuildStampText(AppCertificateInfo certificate, string reason, DateTime signDate)
+        private static string BuildStampText(AppCertificateInfo certificate, string reason, DateTime signDate, string documentHash, string detachedSignatureHash)
         {
             string name = certificate.DisplayName;
             string date = signDate.ToString("yyyy-MM-dd HH:mm:ss");
-            return "Digitally signed by: " + name + Environment.NewLine
+            string text = "Digitally signed by: " + name + Environment.NewLine
                 + "Date: " + date + Environment.NewLine
-                + "Reason: " + reason;
+                + "Reason: " + reason + Environment.NewLine
+                + "Data SHA-256: " + FormatHash(documentHash) + Environment.NewLine;
+
+            if (!string.IsNullOrWhiteSpace(detachedSignatureHash))
+            {
+                text += "SIG SHA-256: " + FormatHash(detachedSignatureHash) + Environment.NewLine;
+            }
+
+            return text + "Cert SHA-1: " + FormatHash(certificate.Thumbprint);
         }
 
         private static BaseFont CreateStampFont()
@@ -105,7 +144,7 @@ namespace PdfSignerWindows.Services
         private static Rectangle BuildStampRectangle(Rectangle page)
         {
             const float width = 220f;
-            const float height = 72f;
+            const float height = 94f;
             const float margin = 36f;
 
             float left = Math.Max(margin, page.Right - margin - width);
@@ -127,6 +166,54 @@ namespace PdfSignerWindows.Services
             }
 
             return candidate;
+        }
+
+        private static string CreateDetachedSignaturePath(string inputPath, string outputDirectory)
+        {
+            string fileName = Path.GetFileNameWithoutExtension(inputPath);
+            string candidate = Path.Combine(outputDirectory, fileName + ".sig");
+            int index = 2;
+
+            while (File.Exists(candidate))
+            {
+                candidate = Path.Combine(outputDirectory, fileName + "-" + index + ".sig");
+                index++;
+            }
+
+            return candidate;
+        }
+
+        private static string ComputeSha256(string path)
+        {
+            using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                return BitConverter.ToString(sha256.ComputeHash(stream)).Replace("-", string.Empty).ToUpperInvariant();
+            }
+        }
+
+        private static string ComputeSha256(byte[] bytes)
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                return BitConverter.ToString(sha256.ComputeHash(bytes)).Replace("-", string.Empty).ToUpperInvariant();
+            }
+        }
+
+        private static string FormatHash(string hash)
+        {
+            if (string.IsNullOrWhiteSpace(hash))
+            {
+                return string.Empty;
+            }
+
+            string normalized = hash.Replace(" ", string.Empty).ToUpperInvariant();
+            if (normalized.Length <= 16)
+            {
+                return normalized;
+            }
+
+            return normalized.Substring(0, 16) + "..." + normalized.Substring(normalized.Length - 8);
         }
 
         private sealed class CadesExternalSignatureContainer : IExternalSignatureContainer

@@ -21,6 +21,7 @@ namespace PdfSignerWindows.Services
         public string OutputFolder { get { return _ru ? "Папка результата" : "Output folder"; } }
         public string Browse { get { return _ru ? "Выбрать" : "Browse"; } }
         public string Reason { get { return _ru ? "Назначение подписи" : "Signing reason"; } }
+        public string DetachedSignature { get { return _ru ? "Создать открепленную подпись .sig" : "Create detached .sig signature"; } }
         public string DefaultReason { get { return _ru ? "Подписано в PDF Signer Windows" : "Signed with PDF Signer Windows"; } }
         public string Sign { get { return _ru ? "Подписать" : "Sign"; } }
         public string Ready { get { return _ru ? "Готово" : "Ready"; } }
