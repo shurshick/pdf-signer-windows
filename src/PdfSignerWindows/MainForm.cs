@@ -24,6 +24,7 @@ namespace PdfSignerWindows
         private TextBox _outputFolder;
         private TextBox _reason;
         private CheckBox _detachedSignature;
+        private CheckBox _saveNextToSource;
         private Button _signButton;
         private ProgressBar _progress;
         private Label _status;
@@ -48,7 +49,7 @@ namespace PdfSignerWindows
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 34));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 42));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 122));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 156));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
             Controls.Add(root);
@@ -163,12 +164,13 @@ namespace PdfSignerWindows
             TableLayoutPanel panel = new TableLayoutPanel();
             panel.Dock = DockStyle.Fill;
             panel.ColumnCount = 3;
-            panel.RowCount = 3;
+            panel.RowCount = 4;
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
             panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
             panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+            panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
             panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
 
             Label outputLabel = new Label();
@@ -203,6 +205,13 @@ namespace PdfSignerWindows
             _detachedSignature.TextAlign = ContentAlignment.MiddleLeft;
             panel.Controls.Add(_detachedSignature, 1, 2);
             panel.SetColumnSpan(_detachedSignature, 2);
+
+            _saveNextToSource = new CheckBox();
+            _saveNextToSource.Text = _text.SaveNextToSource;
+            _saveNextToSource.Dock = DockStyle.Fill;
+            _saveNextToSource.TextAlign = ContentAlignment.MiddleLeft;
+            panel.Controls.Add(_saveNextToSource, 1, 3);
+            panel.SetColumnSpan(_saveNextToSource, 2);
 
             return panel;
         }
@@ -309,6 +318,7 @@ namespace PdfSignerWindows
             string outputFolder = _outputFolder.Text;
             string reason = _reason.Text;
             bool createDetachedSignature = _detachedSignature.Checked;
+            bool saveNextToSource = _saveNextToSource.Checked;
             _progress.Maximum = files.Length;
             _progress.Value = 0;
             _signButton.Enabled = false;
@@ -320,7 +330,7 @@ namespace PdfSignerWindows
                 {
                     string file = files[i];
                     _status.Text = _text.SignedCount(i, files.Length) + ": " + Path.GetFileName(file);
-                    await Task.Run(delegate { pdfSigningService.SignPdf(file, outputFolder, certificate, reason, createDetachedSignature); });
+                    await Task.Run(delegate { pdfSigningService.SignPdf(file, outputFolder, certificate, reason, createDetachedSignature, saveNextToSource); });
                     _progress.Value = i + 1;
                     _status.Text = _text.SignedCount(i + 1, files.Length);
                 }

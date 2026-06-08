@@ -17,7 +17,7 @@ namespace PdfSignerWindows.Services
             _signer = signer;
         }
 
-        public string SignPdf(string inputPath, string outputDirectory, AppCertificateInfo certificate, string reason, bool createDetachedSignature)
+        public string SignPdf(string inputPath, string outputDirectory, AppCertificateInfo certificate, string reason, bool createDetachedSignature, bool saveNextToSource)
         {
             if (string.IsNullOrWhiteSpace(inputPath))
             {
@@ -29,8 +29,9 @@ namespace PdfSignerWindows.Services
                 throw new ArgumentNullException("certificate");
             }
 
-            Directory.CreateDirectory(outputDirectory);
-            string outputPath = CreateOutputPath(inputPath, outputDirectory);
+            string effectiveOutputDirectory = ResolveOutputDirectory(inputPath, outputDirectory, saveNextToSource);
+            Directory.CreateDirectory(effectiveOutputDirectory);
+            string outputPath = CreateOutputPath(inputPath, effectiveOutputDirectory);
             string documentHash = ComputeSha256(inputPath);
             byte[] detachedSignature = null;
             string detachedSignatureHash = null;
@@ -41,12 +42,31 @@ namespace PdfSignerWindows.Services
                 detachedSignatureHash = ComputeSha256(detachedSignature);
             }
 
+            if (createDetachedSignature)
+            {
+                StampPdfOnly(inputPath, outputPath, certificate, reason, documentHash, detachedSignatureHash);
+            }
+            else
+            {
+                StampAndEmbedSignature(inputPath, outputPath, certificate, reason, documentHash);
+            }
+
+            if (detachedSignature != null)
+            {
+                WriteDetachedSignatureFile(inputPath, effectiveOutputDirectory, detachedSignature);
+            }
+
+            return outputPath;
+        }
+
+        private void StampAndEmbedSignature(string inputPath, string outputPath, AppCertificateInfo certificate, string reason, string documentHash)
+        {
             using (PdfReader reader = new PdfReader(inputPath))
             using (FileStream output = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
                 PdfStamper stamper = PdfStamper.CreateSignature(reader, output, '\0', null, true);
                 DateTime signDate = DateTime.Now;
-                DrawStampOnAllPages(stamper, reader, certificate, reason, signDate, documentHash, detachedSignatureHash);
+                DrawStampOnAllPages(stamper, reader, certificate, reason, signDate, documentHash, null);
 
                 PdfSignatureAppearance appearance = stamper.SignatureAppearance;
                 appearance.Reason = reason;
@@ -56,13 +76,17 @@ namespace PdfSignerWindows.Services
                 IExternalSignatureContainer container = new CadesExternalSignatureContainer(_signer, certificate.Thumbprint);
                 MakeSignature.SignExternalContainer(appearance, container, 65536);
             }
+        }
 
-            if (detachedSignature != null)
+        private static void StampPdfOnly(string inputPath, string outputPath, AppCertificateInfo certificate, string reason, string documentHash, string detachedSignatureHash)
+        {
+            using (PdfReader reader = new PdfReader(inputPath))
+            using (FileStream output = new FileStream(outputPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            using (PdfStamper stamper = new PdfStamper(reader, output))
             {
-                WriteDetachedSignatureFile(inputPath, outputDirectory, detachedSignature);
+                DateTime signDate = DateTime.Now;
+                DrawStampOnAllPages(stamper, reader, certificate, reason, signDate, documentHash, detachedSignatureHash);
             }
-
-            return outputPath;
         }
 
         private byte[] CreateDetachedSignature(string inputPath, AppCertificateInfo certificate)
@@ -166,6 +190,16 @@ namespace PdfSignerWindows.Services
             }
 
             return candidate;
+        }
+
+        private static string ResolveOutputDirectory(string inputPath, string outputDirectory, bool saveNextToSource)
+        {
+            if (saveNextToSource)
+            {
+                return Path.GetDirectoryName(inputPath);
+            }
+
+            return outputDirectory;
         }
 
         private static string CreateDetachedSignaturePath(string inputPath, string outputDirectory)
